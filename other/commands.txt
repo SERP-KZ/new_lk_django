@@ -98,6 +98,7 @@ LK_Django
     Третий урок{
         pip install djangorestframework
         INSTALLED_APPS -> 'rest_framework',
+        pip freeze > requirements.txt
             -users\serializers.py-
                         import uuid
                         from .models import CustomUser
@@ -148,8 +149,13 @@ LK_Django
                             path('', include(router.urls)),
                         ]
             -LK/urls-
+                        from django.contrib import admin
                         from django.urls import path, include
-                        path('', include('users.urls')),
+
+                        urlpatterns = [
+                            path('admin/', admin.site.urls),
+                            path('', include('users.urls')),
+                        ]
             settings.py
                    INSTALLED_APPS -> 'rest_framework.authtoken',
                    REST_FRAMEWORK = {
@@ -167,4 +173,5 @@ LK_Django
                    CORS_ALLOWED_ORIGINS = [
                         "http://127.0.0.1",
                     ]
+        pip freeze > requirements.txt
     }
