@@ -1,0 +1,169 @@
+LK_Django
+    Первый урок
+        python -m pip install --upgrade pip
+        python -m pip install django
+        django-admin startproject LK
+        cd LK
+                (pip install psycopg2 /
+                 lk/settings.py       DATABASES = {
+                                            'default': {
+                                                'ENGINE': 'django.db.backends.postgresql_psycopg2',
+                                                'NAME': 'lk_django',
+                                                'USER': 'postgres',
+                                                'PASSWORD': 'Qwerty-!',
+                                                'HOST': '127.0.0.1',
+                                                'PORT': '5432',
+                                            }
+                                        })
+        pip freeze > requirements.txt
+        в корне проекта создаем файл .gitignore
+        manage.py migrate
+        manage.py createsuperuser
+
+
+    Второй урок
+        manage.py startapp users
+            -settings.py-
+                    AUTH_USER_MODEL = 'users.CustomUser'
+                    INSTALLED_APPS  ->   'users.apps.UsersConfig',
+            -users/models-
+                    import uuid
+                    from django.db import models
+                    from django.contrib.auth.models import AbstractUser
+
+
+                    class CustomUser(AbstractUser):
+                        COMPANY = 'COMPANY'
+                        PRIVATE_PERSON = 'PRIVATE'
+                        COMPANY_PRIVATE = [
+                            (COMPANY, 'Компания'),
+                            (PRIVATE_PERSON, 'Частное лицо')
+                        ]
+
+                        id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+                        full_name = models.CharField(verbose_name='Наименование полное', max_length=250, unique=True, null=True, blank=True)
+                        status = models.CharField(verbose_name='Юр\Физ лицо', max_length=50, choices=COMPANY_PRIVATE, default=COMPANY)
+
+            -users/forms.py-
+                        from django.contrib.auth.forms import UserCreationForm, UserChangeForm
+                        from .models import CustomUser
+
+
+                        class CustomUserCreationForm(UserCreationForm):
+
+                            class Meta(UserCreationForm.Meta):
+                                model =CustomUser
+                                fields = UserCreationForm.Meta.fields + ('full_name', 'status',)
+
+
+                        class CustomUserChangeForm(UserChangeForm):
+
+                            class Meta(UserChangeForm.Meta):
+                                model =CustomUser
+                                fields = UserCreationForm.Meta.fields + ('full_name', 'status',)
+
+            -users/admin-
+                        from django.contrib import admin
+                        from django.contrib.auth.admin import UserAdmin
+                        from .forms import CustomUserCreationForm, CustomUserChangeForm
+                        from .models import CustomUser
+
+
+                        class CustomUserAdmin(UserAdmin):
+                            add_form = CustomUserCreationForm
+                            form = CustomUserChangeForm
+                            model = CustomUser
+                            list_display = ['username', 'full_name', 'status']
+
+                            fieldsets = UserAdmin.fieldsets + (
+                                ('Реквизиты 1С', {'fields': ('full_name', 'status',)}),
+                            )
+
+                            add_fieldsets = UserAdmin.add_fieldsets + (
+                                ('Реквизиты 1С', {'fields': ('full_name', 'status',)}),
+                            )
+
+                            search_fields = ('full_name', 'username',)
+                            ordering = ('full_name', 'username',)
+                            list_filter = ('status',)
+
+
+                        admin.site.register(CustomUser, CustomUserAdmin)
+
+        manage.py makemigrations users
+        удаляем полностью БД / если постгри создаем заново с тем же названием пустую
+        manage.py migrate
+        manage.py createsuperuser
+
+    Третий урок
+        pip install djangorestframework
+        INSTALLED_APPS -> 'rest_framework',
+            -users\serializers.py-
+                        import uuid
+                        from .models import CustomUser
+                        from rest_framework import serializers
+
+
+                        class CustomUserSerializer(serializers.ModelSerializer):
+                            id = serializers.UUIDField(default=uuid.uuid4)
+                            password = serializers.CharField(write_only=True)
+
+                            class Meta:
+                                model = CustomUser
+                                fields = ['id', 'username', 'full_name', 'status', 'password']
+
+                            def create(self, validated_data):
+                                user = super().create(validated_data)
+                                user.set_password(validated_data['password'])
+                                user.save()
+                                return user
+
+                            def update(self, instance, validated_data):
+                                user = super().update(instance, validated_data)
+                                try:
+                                    user.set_password(validated_data['password'])
+                                    user.save()
+                                except KeyError:
+                                    pass
+                                return user
+            -users/view.py-
+                        from rest_framework import viewsets, permissions
+                        from .serializers import CustomUserSerializer
+                        from .models import CustomUser
+
+
+                        class CustomUserViewSet(viewsets.ModelViewSet):
+                            queryset = CustomUser.objects.all()
+                            serializer_class = CustomUserSerializer
+                            permission_classes = [permissions.IsAdminUser]
+            -users/urls.py-
+                        from django.urls import path, include
+                        from .views import *
+                        from rest_framework import routers
+
+                        router = routers.DefaultRouter()
+                        router.register(r'api/v1/users', CustomUserViewSet)
+
+                        urlpatterns = [
+                            path('', include(router.urls)),
+                        ]
+            -LK/urls-
+                        from django.urls import path, include
+                        path('', include('users.urls')),
+            settings.py
+                   INSTALLED_APPS -> 'rest_framework.authtoken',
+                   REST_FRAMEWORK = {
+                        'DEFAULT_AUTHENTICATION_CLASSES': [
+                            'rest_framework.authentication.TokenAuthentication',
+                            'rest_framework.authentication.BasicAuthentication',
+                            'rest_framework.authentication.SessionAuthentication',
+                        ]
+                    }
+        manage.py migrate
+        pip install django-cors-headers
+             -settings.py-
+                   INSTALLED_APPS -> 'corsheaders', // перед 'rest_framework',
+                   MIDDLEWARE -> 'corsheaders.middleware.CorsMiddleware', // после  'django.contrib.sessions.middleware.SessionMiddleware',
+                   CORS_ALLOWED_ORIGINS = [
+                        "http://127.0.0.1",
+                    ]
