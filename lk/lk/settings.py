@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 
 from pathlib import Path
+from datetime import timedelta
 import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -27,6 +28,7 @@ SECRET_KEY = 'django-insecure-%sd@2b36%az_)snd6q51xl5%i!yooybt9zs7hfg^j+m4@&qaq_
 DEBUG = True
 
 ALLOWED_HOSTS = []
+# ALLOWED_HOSTS = ['192.168.2.131']
 
 
 # Application definition
@@ -43,6 +45,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'rest_framework.authtoken',
+    'rest_framework_simplejwt',
 ]
 
 MIDDLEWARE = [
@@ -152,10 +155,16 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.BasicAuthentication',
         'rest_framework.authentication.SessionAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ]
 }
 
 CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1",
 ]
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+}
 
